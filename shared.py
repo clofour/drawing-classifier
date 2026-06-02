@@ -45,4 +45,4 @@ CATEGORIES = [
     "leaf",
     "snowman"
 ]
-IMAGE_SIZE = 28
+IMAGE_SIZE = 64

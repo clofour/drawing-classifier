@@ -34,8 +34,8 @@ def split_data():
     validation_drawing_count = int(len(CATEGORIES) * DRAWING_COUNT * VALIDATION_FRACTION)
 
     shuffled_index_data = np.random.permutation(offsets[-1])
-    validation_index_data = shuffled_index_data[validation_drawing_count:]
-    training_index_data = shuffled_index_data[:validation_drawing_count]
+    validation_index_data = shuffled_index_data[:validation_drawing_count]
+    training_index_data = shuffled_index_data[validation_drawing_count:]
 
     return training_index_data, validation_index_data
 
@@ -46,17 +46,21 @@ def process_image(image):
 
     return image
 
+def get_category(index_data):
+    return np.searchsorted(offsets[1:], index_data, side="right")
+
 def lookup_image(global_index):
     global_index = int(global_index)
 
-    category_id = np.searchsorted(offsets[1:], global_index)
+    category_id = get_category(global_index)
     category_start = offsets[category_id]
     local_index = global_index - category_start
 
     image = data[category_id][local_index]
-    processed_image = process(image)
+    processed_image = process_image(image)
+    label = np.int32(category_id)
 
-    return (processed_image, category_id)
+    return (processed_image, label)
 
 def tf_lookup_image(global_index):
     image, label = tf.numpy_function(lookup_image, [global_index], [tf.float32, tf.int32])
@@ -138,8 +142,9 @@ def train_model(model, training_dataset, validation_dataset):
 
     return training_info
 
-def visualize_augmentation(model, x_training, y_training):
-    sample_x = x_training[:5]
+def visualize_augmentation(model, training_dataset):
+    sample_x = training_dataset.take(1)
+    sample_x = sample_x[:5]
     augmentation_y = model.call(sample_x, training=True)
 
     figure, axes = plt.subplots(2, 5, figsize=(12, 5))
@@ -152,14 +157,15 @@ def visualize_augmentation(model, x_training, y_training):
     
     plt.show()
 
-def visualize_results(model, validation_dataset, training_info):
+def visualize_results(model, validation_dataset, validation_index_data, training_info):
     figure, axes = plt.subplots(1, 2, figsize=(12, 5))
     cm_axis = axes[0]
     accuracy_axis = axes[1]
 
+    y_true = get_category(validation_index_data)
     y_prediction = model.predict(validation_dataset)
     y_prediction = np.argmax(y_prediction, axis=1)
-    matrix = confusion_matrix(validation_dataset, y_prediction)
+    matrix = confusion_matrix(y_true, y_prediction)
     matrix_display = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=CATEGORIES)
     matrix_display.plot(ax=cm_axis, colorbar=False)
     cm_axis.set_title("Confusion Matrix")
@@ -177,11 +183,11 @@ def visualize_results(model, validation_dataset, training_info):
 data, offsets = load_data()
 training_index_data, validation_index_data = split_data()
 training_dataset = build_dataset(training_index_data)
-validation_dataset = build_dataset(training_index_data, shuffle=False)
+validation_dataset = build_dataset(validation_index_data, shuffle=False)
 # visualize_data(data)
 model = create_model()
 augment_model(model)
-# visualize_augmentation(model, x_training, y_training)
+visualize_augmentation(model, training_dataset)
 complete_model(model)
 training_info = train_model(model, training_dataset, validation_dataset)
-visualize_results(model, validation_dataset, training_info)
+visualize_results(model, validation_dataset, validation_index_data, training_info)
