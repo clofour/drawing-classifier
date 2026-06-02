@@ -81,19 +81,17 @@ def build_dataset(index_data, shuffle=True):
 
     return dataset
 
-def visualize_data(data):
+def visualize_data(training_dataset):
+    images, labels = next(iter(training_dataset.take(1)))
+
     plt.figure(figsize=(10, 10))
     for i in range(25):
-        chosen_category = random.choice(CATEGORIES)
-        bitmap = data[chosen_category][i]
-        image = bitmap.reshape(IMAGE_SIZE, IMAGE_SIZE)
-
         plt.subplot(5,5,i+1)
         plt.xticks([])
         plt.yticks([])
         plt.grid(False)
-        plt.imshow(image)
-        plt.xlabel(chosen_category)
+        plt.imshow(images[i])
+        plt.xlabel(CATEGORIES[labels[i]])
     
     plt.show()
 
@@ -143,17 +141,16 @@ def train_model(model, training_dataset, validation_dataset):
     return training_info
 
 def visualize_augmentation(model, training_dataset):
-    sample_x = training_dataset.take(1)
-    sample_x = sample_x[:5]
-    augmentation_y = model.call(sample_x, training=True)
+    images, labels = next(iter(training_dataset.take(1)))
+    augmentation_y = model.call(images, training=True)
 
     figure, axes = plt.subplots(2, 5, figsize=(12, 5))
     for i in range(5):
         original_axis = axes[0, i]
         augmented_axis = axes[1, i]
 
-        original_axis.imshow(sample_x[i].squeeze())
-        augmented_axis.imshow(augmentation_y[i].numpy().squeeze())
+        original_axis.imshow(images[i])
+        augmented_axis.imshow(augmentation_y[i])
     
     plt.show()
 
@@ -184,7 +181,7 @@ data, offsets = load_data()
 training_index_data, validation_index_data = split_data()
 training_dataset = build_dataset(training_index_data)
 validation_dataset = build_dataset(validation_index_data, shuffle=False)
-# visualize_data(data)
+visualize_data(training_dataset)
 model = create_model()
 augment_model(model)
 visualize_augmentation(model, training_dataset)
