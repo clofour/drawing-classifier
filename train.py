@@ -8,22 +8,71 @@ from keras import models, layers, losses, callbacks
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
-DRAWING_COUNT = 70000
+DRAWING_COUNT = 100000
 VALIDATION_FRACTION = 0.2
+AUTOTUNE = tf.data.AUTOTUNE
+BATCH_SIZE = 64
+SHUFFLE_SIZE = 10000
 
 date = datetime.now().strftime(r"%Y%m%d_%H%M")
 
-def load_data():
-    data = {}
+data = []
+offsets = [0]
 
-    for category in CATEGORIES:
-        print(f"Loading {category} data")
+for category in CATEGORIES:
+    print(f"Loading {category} data")
 
-        category_file_path = path.join(PROCESSED_DATA_DIR, f"{category}.npy")
-        category_data = np.load(file=category_file_path)
-        data[category] = category_data
+    category_file_path = path.join(PROCESSED_DATA_DIR, f"{category}.npy")
+    category_data = np.load(file=category_file_path, mmap_mode="r")
+    data.append(category_data[:DRAWING_COUNT])
+    offsets.append(offsets[-1] + DRAWING_COUNT)
 
-    return data
+shuffled_indexes = np.random.permutation(offsets[-1])
+validation_drawing_count = int(len(CATEGORIES) * DRAWING_COUNT * VALIDATION_FRACTION)
+validation_indexes = shuffled_indexes[validation_drawing_count:]
+training_indexes = shuffled_indexes[:validation_drawing_count]
+
+def process(image):
+    image = np.array(image, np.float32)
+    image = image / 255
+    image = image.reshape(IMAGE_SIZE, IMAGE_SIZE, 1)
+
+    return image
+
+def lookup(global_index):
+    global_index = int(global_index)
+
+    category_id = np.searchsorted(offsets[1:], global_index)
+    category_start = offsets[category_id]
+    local_index = global_index - category_start
+
+    image = data[category_id][local_index]
+    processed_image = process(image)
+
+    return (processed_image, category_id)
+
+def tf_lookup(global_index):
+    image, label = tf.numpy_function(lookup, [global_index], [tf.float32, tf.int32])
+    image.set_shape((IMAGE_SIZE, IMAGE_SIZE, 1))
+    label.set_shape(())
+
+    return image, label
+
+def build_dataset(index_data, shuffle=True):
+    dataset = tf.data.Dataset.from_tensor_slices(index_data)
+
+    if shuffle:
+        dataset = dataset.shuffle(SHUFFLE_SIZE)
+
+    dataset = dataset.map(tf_lookup, num_parallel_calls=AUTOTUNE)
+    dataset = dataset.batch(BATCH_SIZE)
+    dataset = dataset.prefetch(AUTOTUNE)
+
+    return dataset
+
+training_dataset = build_dataset(training_indexes)
+validation_dataset = build_dataset(validation_indexes, shuffle=False)
+
 
 def visualize_data(data):
     plt.figure(figsize=(10, 10))
