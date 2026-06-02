@@ -166,6 +166,7 @@ def visualize_results(model, validation_dataset, validation_index_data, training
     matrix_display = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=CATEGORIES)
     matrix_display.plot(ax=cm_axis, colorbar=False)
     cm_axis.set_title("Confusion Matrix")
+    cm_axis.set_xticklabels(cm_axis.get_xticklabels(), rotation=90)
 
     accuracy_axis.plot(training_info.history["accuracy"], label="accuracy")
     accuracy_axis.plot(training_info.history["val_accuracy"], label="val_accuracy")
