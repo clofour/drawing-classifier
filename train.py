@@ -8,7 +8,7 @@ from keras import models, layers, losses, callbacks
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
-DRAWING_COUNT = 100000
+DRAWING_COUNT = 100
 VALIDATION_FRACTION = 0.2
 AUTOTUNE = tf.data.AUTOTUNE
 BATCH_SIZE = 64
@@ -16,30 +16,37 @@ SHUFFLE_SIZE = 10000
 
 date = datetime.now().strftime(r"%Y%m%d_%H%M")
 
-data = []
-offsets = [0]
+def load_data():
+    data = []
+    offsets = [0]
 
-for category in CATEGORIES:
-    print(f"Loading {category} data")
+    for category in CATEGORIES:
+        print(f"Loading {category} data")
 
-    category_file_path = path.join(PROCESSED_DATA_DIR, f"{category}.npy")
-    category_data = np.load(file=category_file_path, mmap_mode="r")
-    data.append(category_data[:DRAWING_COUNT])
-    offsets.append(offsets[-1] + DRAWING_COUNT)
+        category_file_path = path.join(PROCESSED_DATA_DIR, f"{category}.npy")
+        category_data = np.load(file=category_file_path, mmap_mode="r")
+        data.append(category_data[:DRAWING_COUNT])
+        offsets.append(offsets[-1] + DRAWING_COUNT)
 
-shuffled_indexes = np.random.permutation(offsets[-1])
-validation_drawing_count = int(len(CATEGORIES) * DRAWING_COUNT * VALIDATION_FRACTION)
-validation_indexes = shuffled_indexes[validation_drawing_count:]
-training_indexes = shuffled_indexes[:validation_drawing_count]
+    return data, offsets
 
-def process(image):
+def split_data():
+    validation_drawing_count = int(len(CATEGORIES) * DRAWING_COUNT * VALIDATION_FRACTION)
+
+    shuffled_index_data = np.random.permutation(offsets[-1])
+    validation_index_data = shuffled_index_data[validation_drawing_count:]
+    training_index_data = shuffled_index_data[:validation_drawing_count]
+
+    return training_index_data, validation_index_data
+
+def process_image(image):
     image = np.array(image, np.float32)
     image = image / 255
     image = image.reshape(IMAGE_SIZE, IMAGE_SIZE, 1)
 
     return image
 
-def lookup(global_index):
+def lookup_image(global_index):
     global_index = int(global_index)
 
     category_id = np.searchsorted(offsets[1:], global_index)
@@ -51,8 +58,8 @@ def lookup(global_index):
 
     return (processed_image, category_id)
 
-def tf_lookup(global_index):
-    image, label = tf.numpy_function(lookup, [global_index], [tf.float32, tf.int32])
+def tf_lookup_image(global_index):
+    image, label = tf.numpy_function(lookup_image, [global_index], [tf.float32, tf.int32])
     image.set_shape((IMAGE_SIZE, IMAGE_SIZE, 1))
     label.set_shape(())
 
@@ -64,15 +71,11 @@ def build_dataset(index_data, shuffle=True):
     if shuffle:
         dataset = dataset.shuffle(SHUFFLE_SIZE)
 
-    dataset = dataset.map(tf_lookup, num_parallel_calls=AUTOTUNE)
+    dataset = dataset.map(tf_lookup_image, num_parallel_calls=AUTOTUNE)
     dataset = dataset.batch(BATCH_SIZE)
     dataset = dataset.prefetch(AUTOTUNE)
 
     return dataset
-
-training_dataset = build_dataset(training_indexes)
-validation_dataset = build_dataset(validation_indexes, shuffle=False)
-
 
 def visualize_data(data):
     plt.figure(figsize=(10, 10))
@@ -89,36 +92,6 @@ def visualize_data(data):
         plt.xlabel(chosen_category)
     
     plt.show()
-
-def process_data(data):
-    images = []
-    labels = []
-
-    for label, category in enumerate(CATEGORIES):
-        category_data = data[category]
-        images.append(category_data[:DRAWING_COUNT])
-        labels.append(np.full(DRAWING_COUNT, label))
-
-    images = np.concatenate(images)
-    labels = np.concatenate(labels)
-
-    images = np.array(images)
-    labels = np.array(labels)
-
-    images = images.reshape(-1, IMAGE_SIZE, IMAGE_SIZE, 1)
-    images = images / 255.0
-
-    permutation = np.random.permutation(len(images))
-    images = images[permutation]
-    labels = labels[permutation]
-
-    data_split_index = int(len(images) * VALIDATION_FRACTION)
-    x_training = images[data_split_index:]
-    y_training = labels[data_split_index:]
-    x_validation = images[:data_split_index]
-    y_validation = labels[:data_split_index]
-
-    return x_training, y_training, x_validation, y_validation
 
 def create_model():
     model = models.Sequential()
@@ -153,14 +126,14 @@ def complete_model(model):
     model.add(layers.Dense(len(CATEGORIES)))
     model.compile(optimizer="adam", loss=losses.SparseCategoricalCrossentropy(from_logits=True), metrics=["accuracy"])
 
-def train_model(model, x_training, y_training, x_validation, y_validation):
+def train_model(model, training_dataset, validation_dataset):
     early_stop = callbacks.EarlyStopping(
         monitor="val_loss",
         patience=3,
         restore_best_weights=True
     )
 
-    training_info = model.fit(x=x_training, y=y_training, epochs=10, validation_data=(x_validation, y_validation), callbacks=[early_stop])
+    training_info = model.fit(training_dataset, epochs=10, validation_data=validation_dataset, callbacks=[early_stop])
     model.save(path.join(MODEL_DIR, f"{date}.keras"))
 
     return training_info
@@ -178,16 +151,15 @@ def visualize_augmentation(model, x_training, y_training):
         augmented_axis.imshow(augmentation_y[i].numpy().squeeze())
     
     plt.show()
-        
 
-def visualize_results(model, x_training, y_training, x_validation, y_validation, training_info):
+def visualize_results(model, validation_dataset, training_info):
     figure, axes = plt.subplots(1, 2, figsize=(12, 5))
     cm_axis = axes[0]
     accuracy_axis = axes[1]
 
-    y_prediction = model.predict(x_validation)
+    y_prediction = model.predict(validation_dataset)
     y_prediction = np.argmax(y_prediction, axis=1)
-    matrix = confusion_matrix(y_validation, y_prediction)
+    matrix = confusion_matrix(validation_dataset, y_prediction)
     matrix_display = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=CATEGORIES)
     matrix_display.plot(ax=cm_axis, colorbar=False)
     cm_axis.set_title("Confusion Matrix")
@@ -202,12 +174,14 @@ def visualize_results(model, x_training, y_training, x_validation, y_validation,
 
     plt.show()
 
-data = load_data()
-visualize_data(data)
-x_training, y_training, x_validation, y_validation = process_data(data)
+data, offsets = load_data()
+training_index_data, validation_index_data = split_data()
+training_dataset = build_dataset(training_index_data)
+validation_dataset = build_dataset(training_index_data, shuffle=False)
+# visualize_data(data)
 model = create_model()
 augment_model(model)
-visualize_augmentation(model, x_training, y_training)
+# visualize_augmentation(model, x_training, y_training)
 complete_model(model)
-training_info = train_model(model, x_training, y_training, x_validation, y_validation)
-visualize_results(model, x_training, y_training, x_validation, y_validation, training_info)
+training_info = train_model(model, training_dataset, validation_dataset)
+visualize_results(model, validation_dataset, training_info)
