@@ -105,17 +105,17 @@ def augment_model(model):
     model.add(layers.RandomCrop(height=IMAGE_SIZE, width=IMAGE_SIZE))
 
 def complete_model(model):
-    model.add(layers.Conv2D(32, (3, 3)), padding="same")
+    model.add(layers.Conv2D(32, (3, 3), padding="same"))
     model.add(layers.BatchNormalization())
     model.add(layers.Activation("relu"))
     model.add(layers.MaxPooling2D(2, 2))
 
-    model.add(layers.Conv2D(64, (3, 3)), padding="same")
+    model.add(layers.Conv2D(64, (3, 3), padding="same"))
     model.add(layers.BatchNormalization())
     model.add(layers.Activation("relu"))
     model.add(layers.MaxPooling2D(2, 2))
 
-    model.add(layers.Conv2D(128, (3, 3)), padding="same")
+    model.add(layers.Conv2D(128, (3, 3), padding="same"))
     model.add(layers.BatchNormalization())
     model.add(layers.Activation("relu"))
     model.add(layers.MaxPooling2D(2, 2))
