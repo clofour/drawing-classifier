@@ -17,13 +17,16 @@ This project comes with a sample model, trained with the parameters used in the 
 
 ## Knowledge Base
 
-### Structure
-The project is structured in the following way.
+### Configuration
+To configure the project, you may change the values in these files:
+* `shared.py` for data directory, raw data directory, processed data directory, model directory, categories, drawing count, validation fraction and image size
+* `download_data.py` for endpoint, bucket name, dataset path and full API URL
+* `process_data.py` for shards per category
+* `train.py` for batch size and shuffle size
+* `demo.py` for model name, model path, CSS file and no confidence threshold
 
 ### Drawings
 inkling currently supports these drawing categories: apple, carrot, cat, house, umbrella, airplane, clock, cloud, star, tree, smiley face, table, pizza, book, computer, ice cream, floor lamp, key, pencil, flower, cake, snowflake, triangle, square, circle, hamburger, map, moon, pear, blueberry, bird, sock, zigzag, compass, cookie, fish, grapes, jail, lightning, leaf and snowman.
-
-More categories can be added by defining them in shared.py and repeating the training pipeline.
 
 ### Limitations
 There are certain limitations with the current model architecture:
