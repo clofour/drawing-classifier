@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
 AUTOTUNE = tf.data.AUTOTUNE
-BATCH_SIZE = 512
+BATCH_SIZE = 256
 SHUFFLE_SIZE = 10000
 
 date = datetime.now().strftime(r"%Y%m%d_%H%M")
@@ -109,13 +109,18 @@ def train_model(model, training_dataset, validation_dataset):
     training_count = (1 - VALIDATION_FRACTION) * DRAWING_COUNT * len(CATEGORIES)
     training_steps = int(training_count // BATCH_SIZE)
 
+    reduce_lr_plateau = callbacks.ReduceLROnPlateau(
+        monitor="val_loss",
+        patience=2,
+        factor=0.5
+    )
     early_stop = callbacks.EarlyStopping(
         monitor="val_loss",
-        patience=3,
+        patience=6,
         restore_best_weights=True
     )
 
-    training_info = model.fit(training_dataset, steps_per_epoch=training_steps, epochs=10, validation_data=validation_dataset, callbacks=[early_stop])
+    training_info = model.fit(training_dataset, steps_per_epoch=training_steps, epochs=10, validation_data=validation_dataset, callbacks=[early_stop, reduce_lr_plateau])
     model.save(path.join(MODEL_DIR, f"{date}.keras"))
 
     return training_info
@@ -160,7 +165,7 @@ def visualize_results(model, validation_dataset, training_info):
     accuracy_axis.set_title("Accuracy")
 
     plt.tight_layout()
-    plt.savefig("training_results.png", dpi=150, bbox_inches="tight")
+    plt.savefig(f"{date}_training_results.png", dpi=150, bbox_inches="tight")
 
 training_dataset = build_dataset(f"{PROCESSED_DATA_DIR}/*/training*")
 validation_dataset = build_dataset(f"{PROCESSED_DATA_DIR}/*/validation*", training=False)
