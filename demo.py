@@ -10,6 +10,7 @@ import gradio as gr
 MODEL_NAME = "sample"
 MODEL_PATH = path.join(MODEL_DIR, f"{MODEL_NAME}.keras")
 CSS_FILE = "./demo.css"
+NO_CONFIDENCE_THRESHOLD = 0.3
 
 model = models.load_model(MODEL_PATH)
 
@@ -41,7 +42,7 @@ def predict(result):
     predicted_category = CATEGORIES[predicted_index]
     confidence = probabilities[predicted_index]
 
-    if confidence >= 0.3:
+    if confidence >= NO_CONFIDENCE_THRESHOLD:
         return f"{predicted_category} ({confidence:.2%})"
     else:
         return "No idea!"
