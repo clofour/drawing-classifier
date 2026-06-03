@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
 AUTOTUNE = tf.data.AUTOTUNE
-BATCH_SIZE = 64
+BATCH_SIZE = 2048
 SHUFFLE_SIZE = 10000
 
 date = datetime.now().strftime(r"%Y%m%d_%H%M")
@@ -39,15 +39,20 @@ def map_data(example):
 
     return image, features["label"]
 
-def build_dataset(dataset_file_pattern, shuffle=True):
-    file_list = tf.data.Dataset.list_files(dataset_file_pattern, shuffle=shuffle)
+def build_dataset(dataset_file_pattern, training=True):
+    file_list = tf.data.Dataset.list_files(dataset_file_pattern, shuffle=training)
     dataset = file_list.interleave(tf.data.TFRecordDataset, cycle_length=AUTOTUNE, num_parallel_calls=AUTOTUNE)
 
-    if shuffle:
+    if training:
         dataset = dataset.shuffle(SHUFFLE_SIZE)
 
     dataset = dataset.map(map_data, num_parallel_calls=AUTOTUNE)
+
     dataset = dataset.batch(BATCH_SIZE)
+
+    if training:
+        dataset = dataset.repeat()
+
     dataset = dataset.prefetch(AUTOTUNE)
 
     return dataset
@@ -64,7 +69,8 @@ def visualize_data(training_dataset):
         plt.imshow(images[i])
         plt.xlabel(CATEGORIES[labels[i]])
     
-    plt.show()
+    plt.tight_layout()
+    plt.savefig(f"{date}_data.png", dpi=150, bbox_inches="tight")
 
 def create_model():
     model = models.Sequential()
@@ -100,13 +106,16 @@ def complete_model(model):
     model.compile(optimizer="adam", loss=losses.SparseCategoricalCrossentropy(from_logits=True), metrics=["accuracy"])
 
 def train_model(model, training_dataset, validation_dataset):
+    training_count = (1 - VALIDATION_FRACTION) * DRAWING_COUNT * len(CATEGORIES)
+    training_steps = int(training_count // BATCH_SIZE)
+
     early_stop = callbacks.EarlyStopping(
         monitor="val_loss",
         patience=3,
         restore_best_weights=True
     )
 
-    training_info = model.fit(training_dataset, epochs=10, validation_data=validation_dataset, callbacks=[early_stop])
+    training_info = model.fit(training_dataset, steps_per_epoch=training_steps, epochs=10, validation_data=validation_dataset, callbacks=[early_stop])
     model.save(path.join(MODEL_DIR, f"{date}.keras"))
 
     return training_info
@@ -123,14 +132,17 @@ def visualize_augmentation(model, training_dataset):
         original_axis.imshow(images[i])
         augmented_axis.imshow(augmentation_y[i])
     
-    plt.show()
+    plt.tight_layout()
+    plt.savefig(f"{date}_augment_data.png", dpi=150, bbox_inches="tight")
 
-def visualize_results(model, validation_dataset, validation_index_data, training_info):
+def visualize_results(model, validation_dataset, training_info):
     figure, axes = plt.subplots(1, 2, figsize=(12, 5))
     cm_axis = axes[0]
     accuracy_axis = axes[1]
 
-    y_true = get_category(validation_index_data)
+    figure.set_size_inches(20, 10)
+
+    y_true = np.concatenate([labels.numpy() for _, labels in validation_dataset])
     y_prediction = model.predict(validation_dataset)
     y_prediction = np.argmax(y_prediction, axis=1)
     matrix = confusion_matrix(y_true, y_prediction)
@@ -147,14 +159,15 @@ def visualize_results(model, validation_dataset, validation_index_data, training
     accuracy_axis.legend(loc="lower right")
     accuracy_axis.set_title("Accuracy")
 
-    plt.show()
+    plt.tight_layout()
+    plt.savefig("training_results.png", dpi=150, bbox_inches="tight")
 
 training_dataset = build_dataset(f"{PROCESSED_DATA_DIR}/*/training*")
-validation_dataset = build_dataset(f"{PROCESSED_DATA_DIR}/*/validation*", shuffle=False)
+validation_dataset = build_dataset(f"{PROCESSED_DATA_DIR}/*/validation*", training=False)
 visualize_data(training_dataset)
 model = create_model()
 augment_model(model)
 visualize_augmentation(model, training_dataset)
 complete_model(model)
 training_info = train_model(model, training_dataset, validation_dataset)
-# visualize_results(model, validation_dataset, validation_index_data, training_info)
+visualize_results(model, validation_dataset, training_info)
