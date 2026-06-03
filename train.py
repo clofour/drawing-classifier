@@ -48,9 +48,7 @@ def build_dataset(dataset_file_pattern, training=True):
         dataset = dataset.repeat()
 
     dataset = dataset.map(map_data, num_parallel_calls=AUTOTUNE)
-
     dataset = dataset.batch(BATCH_SIZE)
-
     dataset = dataset.prefetch(AUTOTUNE)
 
     return dataset
