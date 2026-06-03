@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
 AUTOTUNE = tf.data.AUTOTUNE
-BATCH_SIZE = 2048
+BATCH_SIZE = 512
 SHUFFLE_SIZE = 10000
 
 date = datetime.now().strftime(r"%Y%m%d_%H%M")
@@ -79,8 +79,8 @@ def create_model():
     return model
 
 def augment_model(model):
-    model.add(layers.RandomTranslation(height_factor=0.1, width_factor=0.1, fill_mode="constant", fill_value=0, interpolation="nearest"))
-    model.add(layers.RandomZoom(height_factor=(0, 0.2), fill_mode="constant", fill_value=0, interpolation="nearest"))
+    model.add(layers.RandomTranslation(height_factor=0.05, width_factor=0.05, fill_mode="constant", fill_value=0, interpolation="nearest"))
+    model.add(layers.RandomZoom(height_factor=(0, 0.1), fill_mode="constant", fill_value=0, interpolation="nearest"))
     model.add(layers.RandomCrop(height=IMAGE_SIZE, width=IMAGE_SIZE))
 
 def complete_model(model):
