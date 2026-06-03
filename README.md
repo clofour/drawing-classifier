@@ -12,7 +12,7 @@ I created this project as a first step into machine learning. I used the QuickDr
 3. Install dependencies with `pip -r requirements.txt`.
 3. Run train.py with `python train.py`.
 
-### DemonstrationV
+### Demonstration
 This project comes with a sample model, trained with the parameters used in the repo. To use the demonstration, run the demo.py script.
 
 ## Knowledge Base
