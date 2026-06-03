@@ -1,36 +1,34 @@
 # inkling
 
-inkling is a convolutional neural network used for classifying drawings. It was created using numpy/tensorflow/keras and trained on a subset of Google's QuickDraw dataset. It includes visualizations of training information using matplotlib/scikit-learn, as well as a demo with gradio.
+inkling is a convolutional neural network used for classifying drawings, trained on Google's QuickDraw dataset with numpy/tensorflow/keras. It includes visualizations of training information using matplotlib/scikit-learn, a demo with gradio, an in-house data processing pipeline, and utilities for automating tedious processes (e.g. downloading datasets). It comes with a sample model, which supports 41 different categories (hand-picked by yours truly) at an accuracy of X%.
 
 I created this project as a first step into machine learning. I used the QuickDraw dataset because it was easy to understand, familiar and fun!
 
 ## Quick Start
 
 ### Training
-1. Download the numpy bitmap files corresponding to the categories listed in the Knowledge base from the [Google QuickDraw dataset](https://github.com/googlecreativelab/quickdraw-dataset) and place them in the data directory.
-2. Create a virtual environment with the Python version dictated in .python-version and activate it
-3. Install dependencies with `pip -r requirements.txt`.
+1. Create a Conda environment with `conda env create -f environment.yml`. Activate it with `conda activate main`.
+2. Download the simplified dataset files corresponding to the categories listed in the Knowledge Base from the [Google QuickDraw dataset](https://github.com/googlecreativelab/quickdraw-dataset) and place them in the data/raw directory. You can automate this with `python download_data.py`.
+3. Process the data with `python process_data,py`.
 3. Run train.py with `python train.py`.
 
 ### Demonstration
-This project comes with a sample model, trained with the parameters used in the repo. To use the demonstration, run the demo.py script.
+This project comes with a sample model, trained with the parameters used in the repo. To use the demonstration, run  `python demo.py`.
 
 ## Knowledge Base
 
-### Drawings
-inkling currently supports these drawing categories:
-* apple
-* carrot
-* cat
-* house
-* umbrella
-* airplane
-* clock
-* cloud
-* star
-* tree
+### Structure
+The project is structured in the following way.
 
-More categories can be added by downloading the corresponding numpy bitmap files, adding the new categories in shared.py and retraining the model.
+### Drawings
+inkling currently supports these drawing categories: apple, carrot, cat, house, umbrella, airplane, clock, cloud, star, tree, smiley face, table, pizza, book, computer, ice cream, floor lamp, key, pencil, flower, cake, snowflake, triangle, square, circle, hamburger, map, moon, pear, blueberry, bird, sock, zigzag, compass, cookie, fish, grapes, jail, lightning, leaf and snowman.
+
+More categories can be added by defining them in shared.py and repeating the training pipeline.
+
+### Limitations
+There are certain limitations with the current model architecture:
+* There is no support for color, as the QuickDraw dataset only contains black and white images.
+* The number of categories supported is purposefully small, as adding more categories decreases accuracy.
 
 ### Concepts
 Convolutional Neural Networks are systems designed to identify spatial relationships between pixels, inspired by the human visual system. They are composed of the following layers:
