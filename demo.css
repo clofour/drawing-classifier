@@ -1,0 +1,11 @@
+.icon-button-wrapper.top-panel.hide-top-corner {
+  display: none;
+}
+
+.half-container.right {
+  display: none;
+}
+
+.toolbar-wrap {
+  top: 40% !important;
+}

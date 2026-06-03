@@ -89,4 +89,4 @@ with gr.Blocks() as demo:
                 clear_button = gr.Button("Clear")
                 clear_button.click(fn=clear_all, outputs=[category_output, sketchpad_input, prediction_output])
         
-demo.launch()
+demo.launch(css_paths=[CSS_FILE])
