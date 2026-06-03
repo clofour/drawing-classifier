@@ -45,13 +45,11 @@ def build_dataset(dataset_file_pattern, training=True):
 
     if training:
         dataset = dataset.shuffle(SHUFFLE_SIZE)
+        dataset = dataset.repeat()
 
     dataset = dataset.map(map_data, num_parallel_calls=AUTOTUNE)
 
     dataset = dataset.batch(BATCH_SIZE)
-
-    if training:
-        dataset = dataset.repeat()
 
     dataset = dataset.prefetch(AUTOTUNE)
 
@@ -85,17 +83,17 @@ def augment_model(model):
 
 def complete_model(model):
     model.add(layers.Conv2D(32, (3, 3), padding="same"))
-    model.add(layers.BatchNormalization())
+    model.add(layers.LayerNormalization())
     model.add(layers.Activation("relu"))
     model.add(layers.MaxPooling2D(2, 2))
 
     model.add(layers.Conv2D(64, (3, 3), padding="same"))
-    model.add(layers.BatchNormalization())
+    model.add(layers.LayerNormalization())
     model.add(layers.Activation("relu"))
     model.add(layers.MaxPooling2D(2, 2))
 
     model.add(layers.Conv2D(128, (3, 3), padding="same"))
-    model.add(layers.BatchNormalization())
+    model.add(layers.LayerNormalization())
     model.add(layers.Activation("relu"))
     model.add(layers.MaxPooling2D(2, 2))
 
