@@ -41,7 +41,7 @@ def predict(result):
     predicted_category = CATEGORIES[predicted_index]
     confidence = probabilities[predicted_index]
 
-    if confidence >= 0.5:
+    if confidence >= 0.3:
         return f"{predicted_category} ({confidence:.2%})"
     else:
         return "No idea!"
@@ -51,15 +51,16 @@ def clear_all():
 
 with gr.Blocks() as demo:
     gr.Markdown("# Inkling")
-    gr.Markdown("Draw the generated category!")
+    gr.Markdown("Inkling is a machine learning demo that tries to guess what you've drawn using a convolutional neural network trained on Google's QuickDraw dataset.")
+    gr.Markdown("Generate a random category, sketch it, submit and inkling will try to classify your drawing into one of 41 categories. If it guesses wrong, either the model needs a bit more training or your drawing might be a bit *too* questionable. Don't worry; the model never sees the generated random category, so it's all fair :)")
 
     with gr.Row():
         with gr.Column(scale=1):
             category_output = gr.Text(
-                label="Category to draw",
+                label="Random category",
                 interactive=False
             )
-            generate_category_button = gr.Button("Generate Category")
+            generate_category_button = gr.Button("Generate")
             generate_category_button.click(fn=generate_category, outputs=category_output)
             prediction_output = gr.Text(
                 label="Prediction"
