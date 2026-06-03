@@ -149,7 +149,6 @@ def visualize_results(model, validation_dataset, validation_index_data, training
 
     plt.show()
 
-data, offsets = load_data()
 training_dataset = build_dataset(f"{PROCESSED_DATA_DIR}/*/training*")
 validation_dataset = build_dataset(f"{PROCESSED_DATA_DIR}/*/validation*", shuffle=False)
 visualize_data(training_dataset)
@@ -158,4 +157,4 @@ augment_model(model)
 visualize_augmentation(model, training_dataset)
 complete_model(model)
 training_info = train_model(model, training_dataset, validation_dataset)
-visualize_results(model, validation_dataset, validation_index_data, training_info)
+# visualize_results(model, validation_dataset, validation_index_data, training_info)

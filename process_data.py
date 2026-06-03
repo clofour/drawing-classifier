@@ -1,4 +1,5 @@
 from shared import RAW_DATA_DIR, PROCESSED_DATA_DIR, CATEGORIES, DRAWING_COUNT, VALIDATION_FRACTION, IMAGE_SIZE
+import os
 import os.path as path
 import json
 import numpy as np
@@ -6,7 +7,6 @@ import tensorflow as tf
 import cairocffi as cairo
 
 SHARDS_PER_CATEGORY = 4
-DRAWINGS_PER_SHARD = DRAWING_COUNT / SHARDS_PER_CATEGORY
 
 def read_ndjson(path):
     data = []
@@ -84,13 +84,15 @@ def split_data():
     validation_index_data = random_index_data[:validation_drawing_count]
     training_index_data = random_index_data[validation_drawing_count:]
 
-    return validation_index_data, training_index_data
+    return training_index_data, validation_index_data
 
 def save_data(name, category, data, index_data):
+    drawings_per_shard = len(index_data) // SHARDS_PER_CATEGORY
+
     for dataset_index in range(SHARDS_PER_CATEGORY):
         file_path = path.join(PROCESSED_DATA_DIR, category, f"{name}_{dataset_index}")
-        start_list_index = DRAWINGS_PER_SHARD * dataset_index
-        end_list_index = DRAWINGS_PER_SHARD * (dataset_index + 1)
+        start_list_index = drawings_per_shard * dataset_index
+        end_list_index = drawings_per_shard * (dataset_index + 1)
 
         with tf.io.TFRecordWriter(file_path) as file_writer:
             for image_index in index_data[start_list_index:end_list_index]:
@@ -112,15 +114,16 @@ for category in CATEGORIES:
     raw_category_file_path = path.join(RAW_DATA_DIR, f"{category}.ndjson")
     processed_category_file_path = path.join(PROCESSED_DATA_DIR, category)
 
-    if not path.exists(f"{processed_category_file_path}.npy"):
-        print(f"Processing {category} data")
+    if not path.exists(f"{processed_category_file_path}"):
+        os.makedirs(processed_category_file_path, exist_ok=True)
 
+        print(f"Processing {category} data")
     
         data = read_ndjson(raw_category_file_path)
         preprocessed_data = preprocess_data(data)
         processed_data = process_data(preprocessed_data, side=IMAGE_SIZE)
         postprocessed_data = postprocess_data(processed_data)
-        index_data = split_data()
-        save_data("training", category, postprocessed_data, index_data)
-        save_data("validation", category, postprocessed_data, index_data)
+        training_index_data, validation_index_data = split_data()
+        save_data("training", category, postprocessed_data, training_index_data)
+        save_data("validation", category, postprocessed_data, validation_index_data)
         
