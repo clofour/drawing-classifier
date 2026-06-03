@@ -4,8 +4,8 @@ import requests
 
 ENDPOINT = "https://storage.googleapis.com"
 BUCKET_NAME = "quickdraw_dataset"
-NUMPY_BITMAP_PATH = "full/raw"
-API_URL = f"{ENDPOINT}/{BUCKET_NAME}/{NUMPY_BITMAP_PATH}"
+DATASET_PATH = "full/simplified"
+API_URL = f"{ENDPOINT}/{BUCKET_NAME}/{DATASET_PATH}"
 
 for category in CATEGORIES:
     category_file_path = f"{RAW_DATA_DIR}/{category}.ndjson"
