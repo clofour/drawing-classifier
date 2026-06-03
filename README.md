@@ -1,6 +1,6 @@
 # inkling
 
-inkling is a convolutional neural network used for classifying drawings, trained on Google's QuickDraw dataset with numpy/tensorflow/keras. It includes visualizations of training information using matplotlib/scikit-learn, a demo with gradio, an in-house data processing pipeline, and utilities for automating tedious processes (e.g. downloading datasets). It comes with a sample model, which supports 41 different categories (hand-picked by yours truly) at an accuracy of X%.
+inkling is a convolutional neural network used for classifying drawings, trained on Google's QuickDraw dataset with numpy/tensorflow/keras. It includes visualizations of training information using matplotlib/scikit-learn, a demo with gradio, an in-house data processing pipeline, and utilities for automating tedious processes (e.g. downloading datasets). It comes with a sample model, which supports 41 different categories (hand-picked by yours truly) at an accuracy of 90%.
 
 I created this project as a first step into machine learning. I used the QuickDraw dataset because it was easy to understand, familiar and fun!
 
