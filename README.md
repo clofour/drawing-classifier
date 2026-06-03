@@ -51,4 +51,4 @@ Convolutional Neural Networks are systems designed to identify spatial relations
 ![Demo](/docs/assets/demo.png)
 ![Dataset Visualization](/docs/assets/sample_data_visualization.png)
 ![Augmeted Dataset Visualization](/docs/assets/sample_augment_data_visualization.png)
-![Training Results](/docs/assets/training_results.png)
+![Training Results](/docs/assets/sample_training_results.png)
