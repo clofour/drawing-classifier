@@ -1,8 +1,12 @@
-from shared import RAW_DATA_DIR, PROCESSED_DATA_DIR, MODEL_DIR, CATEGORIES, IMAGE_SIZE
+from shared import RAW_DATA_DIR, PROCESSED_DATA_DIR, CATEGORIES, DRAWING_COUNT, VALIDATION_FRACTION, IMAGE_SIZE
 import os.path as path
 import json
 import numpy as np
+import tensorflow as tf
 import cairocffi as cairo
+
+SHARDS_PER_CATEGORY = 4
+DRAWINGS_PER_SHARD = DRAWING_COUNT / SHARDS_PER_CATEGORY
 
 def read_ndjson(path):
     data = []
@@ -73,6 +77,36 @@ def process_data(vector_images, side=28, line_diameter=16, padding=16, bg_color=
 def postprocess_data(data):
     return np.array(data)
 
+def split_data():
+    validation_drawing_count = int(DRAWING_COUNT * VALIDATION_FRACTION)
+
+    random_index_data = np.random.permutation(DRAWING_COUNT)
+    validation_index_data = random_index_data[:validation_drawing_count]
+    training_index_data = random_index_data[validation_drawing_count:]
+
+    return validation_index_data, training_index_data
+
+def save_data(name, category, data, index_data):
+    for dataset_index in range(SHARDS_PER_CATEGORY):
+        file_path = path.join(PROCESSED_DATA_DIR, category, f"{name}_{dataset_index}")
+        start_list_index = DRAWINGS_PER_SHARD * dataset_index
+        end_list_index = DRAWINGS_PER_SHARD * (dataset_index + 1)
+
+        with tf.io.TFRecordWriter(file_path) as file_writer:
+            for image_index in index_data[start_list_index:end_list_index]:
+
+                image = data[image_index]
+                label = CATEGORIES.index(category)
+
+                label_feature = tf.train.Feature(int64_list=tf.train.Int64List(value=[label]))
+                image_feature = tf.train.Feature(bytes_list=tf.train.BytesList(value=[image.tobytes()]))
+                features = tf.train.Features(feature={
+                    "label": label_feature,
+                    "image": image_feature
+                })
+                example = tf.train.Example(features=features)
+                serialized_example = example.SerializeToString()
+                file_writer.write(serialized_example)
 
 for category in CATEGORIES:
     raw_category_file_path = path.join(RAW_DATA_DIR, f"{category}.ndjson")
@@ -85,6 +119,8 @@ for category in CATEGORIES:
         data = read_ndjson(raw_category_file_path)
         preprocessed_data = preprocess_data(data)
         processed_data = process_data(preprocessed_data, side=IMAGE_SIZE)
-        postprocessed_data = np.array(processed_data)
-        np.save(processed_category_file_path, postprocessed_data)
+        postprocessed_data = postprocess_data(processed_data)
+        index_data = split_data()
+        save_data("training", category, postprocessed_data, index_data)
+        save_data("validation", category, postprocessed_data, index_data)
         

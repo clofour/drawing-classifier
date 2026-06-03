@@ -45,4 +45,6 @@ CATEGORIES = [
     "leaf",
     "snowman"
 ]
+DRAWING_COUNT = 100000
+VALIDATION_FRACTION = 0.2
 IMAGE_SIZE = 64

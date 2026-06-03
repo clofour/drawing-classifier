@@ -1,4 +1,4 @@
-from shared import PROCESSED_DATA_DIR, MODEL_DIR, CATEGORIES, IMAGE_SIZE
+from shared import PROCESSED_DATA_DIR, MODEL_DIR, CATEGORIES, DRAWING_COUNT, VALIDATION_FRACTION, IMAGE_SIZE
 import random
 from datetime import datetime
 import os.path as path
@@ -8,8 +8,6 @@ from keras import models, layers, losses, callbacks
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
-DRAWING_COUNT = 100
-VALIDATION_FRACTION = 0.2
 AUTOTUNE = tf.data.AUTOTUNE
 BATCH_SIZE = 64
 SHUFFLE_SIZE = 10000
@@ -30,52 +28,25 @@ def load_data():
 
     return data, offsets
 
-def split_data():
-    validation_drawing_count = int(len(CATEGORIES) * DRAWING_COUNT * VALIDATION_FRACTION)
+def map_data(example):
+    features = tf.io.parse_single_example(example, {
+        "label": tf.io.FixedLenFeature([], tf.int64),
+        "image": tf.io.FixedLenFeature([], tf.string)
+    })
+    image = tf.io.decode_raw(features["image"], tf.uint8)
+    image = tf.reshape(image, (IMAGE_SIZE, IMAGE_SIZE, 1))
+    image = tf.cast(image, tf.float32) / 255
 
-    shuffled_index_data = np.random.permutation(offsets[-1])
-    validation_index_data = shuffled_index_data[:validation_drawing_count]
-    training_index_data = shuffled_index_data[validation_drawing_count:]
+    return image, features["label"]
 
-    return training_index_data, validation_index_data
-
-def process_image(image):
-    image = np.array(image, np.float32)
-    image = image / 255
-    image = image.reshape(IMAGE_SIZE, IMAGE_SIZE, 1)
-
-    return image
-
-def get_category(index_data):
-    return np.searchsorted(offsets[1:], index_data, side="right")
-
-def lookup_image(global_index):
-    global_index = int(global_index)
-
-    category_id = get_category(global_index)
-    category_start = offsets[category_id]
-    local_index = global_index - category_start
-
-    image = data[category_id][local_index]
-    processed_image = process_image(image)
-    label = np.int32(category_id)
-
-    return (processed_image, label)
-
-def tf_lookup_image(global_index):
-    image, label = tf.numpy_function(lookup_image, [global_index], [tf.float32, tf.int32])
-    image.set_shape((IMAGE_SIZE, IMAGE_SIZE, 1))
-    label.set_shape(())
-
-    return image, label
-
-def build_dataset(index_data, shuffle=True):
-    dataset = tf.data.Dataset.from_tensor_slices(index_data)
+def build_dataset(dataset_file_pattern, shuffle=True):
+    file_list = tf.data.Dataset.list_files(dataset_file_pattern, shuffle=shuffle)
+    dataset = file_list.interleave(tf.data.TFRecordDataset, cycle_length=AUTOTUNE, num_parallel_calls=AUTOTUNE)
 
     if shuffle:
         dataset = dataset.shuffle(SHUFFLE_SIZE)
 
-    dataset = dataset.map(tf_lookup_image, num_parallel_calls=AUTOTUNE)
+    dataset = dataset.map(map_data, num_parallel_calls=AUTOTUNE)
     dataset = dataset.batch(BATCH_SIZE)
     dataset = dataset.prefetch(AUTOTUNE)
 
@@ -179,9 +150,8 @@ def visualize_results(model, validation_dataset, validation_index_data, training
     plt.show()
 
 data, offsets = load_data()
-training_index_data, validation_index_data = split_data()
-training_dataset = build_dataset(training_index_data)
-validation_dataset = build_dataset(validation_index_data, shuffle=False)
+training_dataset = build_dataset(f"{PROCESSED_DATA_DIR}/*/training*")
+validation_dataset = build_dataset(f"{PROCESSED_DATA_DIR}/*/validation*", shuffle=False)
 visualize_data(training_dataset)
 model = create_model()
 augment_model(model)
